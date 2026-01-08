@@ -7,19 +7,29 @@ import { Layout } from "@/components/Layout";
 import { useAuth } from "@/hooks/use-auth";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Loader2 } from "lucide-react";
-import AuthPage from "@/pages/AuthPage";
-import Dashboard from "@/pages/Dashboard";
-import NotFound from "@/pages/not-found";
+import { lazy, Suspense } from "react";
 
-function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
+const AuthPage = lazy(() => import("@/pages/AuthPage"));
+const Dashboard = lazy(() => import("@/pages/Dashboard"));
+const NotFound = lazy(() => import("@/pages/not-found"));
+
+function LoadingSpinner() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  );
+}
+
+function ProtectedRoute({
+  component: Component,
+}: {
+  component: React.ComponentType;
+}) {
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   if (!user) {
@@ -28,7 +38,9 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
 
   return (
     <Layout>
-      <Component />
+      <Suspense fallback={<LoadingSpinner />}>
+        <Component />
+      </Suspense>
     </Layout>
   );
 }
@@ -36,7 +48,11 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
 function Router() {
   return (
     <Switch>
-      <Route path="/auth" component={AuthPage} />
+      <Route path="/auth">
+        <Suspense fallback={<LoadingSpinner />}>
+          <AuthPage />
+        </Suspense>
+      </Route>
       <Route path="/">
         <ProtectedRoute component={Dashboard} />
       </Route>
