@@ -12,7 +12,6 @@ import { lazy, Suspense } from "react";
 const AuthPage = lazy(() => import("@/pages/AuthPage"));
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
 const NotFound = lazy(() => import("@/pages/not-found"));
-const Editor = lazy(() => import("./Editor"));
 
 function LoadingSpinner() {
   return (
