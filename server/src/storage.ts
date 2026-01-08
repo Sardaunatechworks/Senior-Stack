@@ -1,4 +1,4 @@
-import { users, reports, type User, type InsertUser, type Report, type InsertReportRequest, type UpdateReportStatusRequest } from "@shared/schema";
+import { users, reports, type User, type InsertUser, type Report, type InsertReport, type CreateReportRequest, type UpdateReportStatusRequest } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
@@ -180,7 +180,7 @@ class InMemoryStorage implements IStorage {
       ...report, 
       id: this.reportId++, 
       createdAt: new Date(),
-      status: report.status || 'pending'
+      status: 'pending'
     };
     this.reports.push(newReport);
     return newReport;
