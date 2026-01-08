@@ -11,7 +11,7 @@ async function buildAll() {
   console.log("building server...");
   // Use tsc to compile TypeScript to JavaScript (no bundling)
   try {
-    execSync("tsc --project tsconfig.server.json --outDir dist", {
+    execSync("tsc --project tsconfig.server.json --outDir dist/server", {
       stdio: "inherit",
     });
     console.log("? Server compiled successfully");
