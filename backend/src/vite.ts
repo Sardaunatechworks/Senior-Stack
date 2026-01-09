@@ -4,11 +4,20 @@ import { type Server } from "http";
 import viteConfig from "../../vite.config";
 import fs from "fs";
 import path from "path";
-import { nanoid } from "nanoid";
 
 const viteLogger = createLogger();
 
 export async function setupVite(server: Server, app: Express) {
+  if (process.env.NODE_ENV === "development") {
+    // Development mode: Use Vite dev server
+    setupViteDev(server, app);
+  } else {
+    // Production mode: Serve pre-built HTML
+    setupViteProduction(app);
+  }
+}
+
+async function setupViteDev(server: Server, app: Express) {
   const serverOptions = {
     middlewareMode: true,
     hmr: { server, path: "/vite-hmr" },
@@ -39,21 +48,55 @@ export async function setupVite(server: Server, app: Express) {
         import.meta.dirname,
         "..",
         "..",
-        "client",
+        "frontend",
         "index.html",
       );
 
-      // always reload the index.html file from disk incase it changes
+      // Read index.html from frontend source directory
       let template = await fs.promises.readFile(clientTemplate, "utf-8");
-      template = template.replace(
-        `src="/src/main.tsx"`,
-        `src="/src/main.tsx?v=${nanoid()}"`,
-      );
       const page = await vite.transformIndexHtml(url, template);
       res.status(200).set({ "Content-Type": "text/html" }).end(page);
     } catch (e) {
-      vite.ssrFixStacktrace(e as Error);
-      next(e);
+      const error = e as Error;
+      viteLogger.error(
+        `Failed to read frontend/index.html: ${error.message}\n` +
+        "Make sure the frontend directory exists with an index.html file.",
+      );
+      vite.ssrFixStacktrace(error);
+      next(error);
+    }
+  });
+}
+
+function setupViteProduction(app: Express) {
+  const productionHtmlPath = path.resolve(
+    import.meta.dirname,
+    "..",
+    "..",
+    "dist",
+    "public",
+    "index.html",
+  );
+
+  app.use("*", (req, res, next) => {
+    try {
+      // In production, serve the pre-built HTML
+      const html = fs.readFileSync(productionHtmlPath, "utf-8");
+      res.status(200).set({ "Content-Type": "text/html" }).send(html);
+    } catch (error) {
+      const err = error as NodeJS.ErrnoException;
+      if (err.code === "ENOENT") {
+        viteLogger.error(
+          `Production build not found at ${productionHtmlPath}.\n` +
+          "Run 'npm run build' to generate the production build.",
+        );
+        res.status(500).send(
+          "Production build not found. Please run 'npm run build'.",
+        );
+      } else {
+        viteLogger.error(`Failed to read HTML file: ${err.message}`);
+        next(error);
+      }
     }
   });
 }

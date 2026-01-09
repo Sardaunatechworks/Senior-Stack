@@ -108,7 +108,7 @@
 
 ```
 senior-stack/
-├── client/              # React frontend application
+├── frontend/            # React frontend application
 │   ├── src/
 │   │   ├── pages/       # Page components
 │   │   ├── components/  # Reusable components
@@ -116,7 +116,7 @@ senior-stack/
 │   │   ├── lib/         # Utilities (queryClient, utils)
 │   │   └── App.tsx      # Root component
 │   └── public/
-├── server/              # Express backend application
+├── backend/             # Express backend application
 │   ├── index.ts         # Server entry point
 │   ├── routes.ts        # API route handlers
 │   ├── auth.ts          # Authentication setup
