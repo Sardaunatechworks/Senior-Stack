@@ -3,14 +3,13 @@ import express from "express";
 import cookieParser from "cookie-parser";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-// STATIC IMPORTS (Fixes the "Module Not Found" error)
-import { registerRoutes } from "../backend/src/routes";
-import { serveStatic } from "../backend/src/static";
+// FIXED IMPORTS: Added ".js" extension for ESM compatibility
+import { registerRoutes } from "../backend/src/routes.js";
+import { serveStatic } from "../backend/src/static.js";
 
 let app: any = null;
 
 async function getApp() {
-  // Return cached app if it exists (prevents cold start delays)
   if (app) return app;
 
   const appInstance = express();
@@ -19,7 +18,7 @@ async function getApp() {
   appInstance.use(express.urlencoded({ extended: false }));
   appInstance.use(cookieParser());
 
-  // Fix CORS for Vercel
+  // CORS Configuration
   appInstance.use((req: any, res: any, next: any) => {
     const allowedOrigin = process.env.VERCEL_URL
       ? `https://${process.env.VERCEL_URL}`
@@ -36,12 +35,13 @@ async function getApp() {
 
   const httpServer = createServer(appInstance);
 
-  // Register routes and static files
   try {
+    // Pass the appInstance to routes
     await registerRoutes(httpServer, appInstance);
+    // Serve static files if needed (though Vercel handles this usually)
     serveStatic(appInstance);
   } catch (err) {
-    console.error("Failed to register routes:", err);
+    console.error("Failed to initialize backend:", err);
   }
 
   app = appInstance;
@@ -53,7 +53,7 @@ export default async (req: VercelRequest, res: VercelResponse) => {
     const appInstance = await getApp();
     return appInstance(req as any, res as any);
   } catch (error) {
-    console.error("API Integration Error:", error);
+    console.error("API Error:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
