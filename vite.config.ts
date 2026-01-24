@@ -14,55 +14,21 @@ if (isDev && isReplit) {
 }
 
 export default defineConfig({
-  plugins: [
-    react(),
-    ...replitPlugins,
-  ],
+  // ... other configs
   resolve: {
-      alias: {
-      "@": path.resolve(import.meta.dirname, "frontend", "src"),
+    alias: {
+      // CHANGE THIS: remove "frontend"
+      "@": path.resolve(import.meta.dirname, "src"),
       "@shared": path.resolve(import.meta.dirname, "shared"),
       "@assets": path.resolve(import.meta.dirname, "attached_assets"),
     },
   },
-  root: path.resolve(import.meta.dirname, "frontend"),
+
+  root: path.resolve(import.meta.dirname), 
   build: {
+    // Keep this as is, it's already absolute
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
-    chunkSizeWarningLimit: 1000,
-    minify: "terser",
-    terserOptions: {
-      compress: {
-        drop_console: true,
-      },
-    },
-    rollupOptions: {
-      output: {
-        manualChunks: (id) => {
-          if (id.includes("node_modules")) {
-            if (
-              id.includes("react") ||
-              id.includes("react-dom") ||
-              id.includes("react-router")
-            ) {
-              return "react-vendor";
-            }
-            if (id.includes("@tanstack")) {
-              return "query-lib";
-            }
-            if (id.includes("lucide")) {
-              return "ui-components";
-            }
-            return "vendor";
-          }
-        },
-      },
-    },
-  },
-  server: {
-    fs: {
-      strict: true,
-      deny: ["**/.*"],
-    },
+    // ...
   },
 });
