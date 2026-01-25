@@ -1,11 +1,17 @@
 import type { Express } from "express";
-import { type Server } from "http";
-import { storage } from "./storage.js";
-import { api } from "../../shared/routes.js";
+import { createServer, type Server } from "http";
+import { storage } from "./storage.js"; // ✅ .js extension
 import { z } from "zod";
 import bcrypt from "bcryptjs";
-import { sendAdminNotification } from "./email.js";
 
+// ✅ CRITICAL FIX: Import 'api' from SHARED, not from API folder
+import { api } from "../../shared/routes.js"; 
+
+import { insertUserSchema, insertReportSchema, users, reports } from '../../shared/schema.js'; // ✅ .js extension
+import type { InsertUser, CreateReportRequest, UpdateReportStatusRequest } from '../../shared/schema.js'; // ✅ .js extension
+import { sendAdminNotification } from "./email.js"; // ✅ .js extension
+
+// ... rest of your file code ...
 export async function registerRoutes(
   httpServer: Server,
   app: Express

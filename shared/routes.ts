@@ -1,6 +1,8 @@
 import { z } from 'zod';
-import { insertUserSchema, insertReportSchema, users, reports } from './schema';
-import type { InsertUser, CreateReportRequest, UpdateReportStatusRequest } from './schema';
+import { insertUserSchema, insertReportSchema, users, reports } from './schema.js';
+import type { InsertUser, CreateReportRequest, UpdateReportStatusRequest } from './schema.js';
+
+// ... rest of file ...
 
 export { insertUserSchema, insertReportSchema };
 export type { InsertUser, CreateReportRequest, UpdateReportStatusRequest };
