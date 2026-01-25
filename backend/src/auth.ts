@@ -4,8 +4,8 @@ import { Express } from "express";
 import session from "express-session";
 import pgSession from "connect-pg-simple";
 import { pool } from "./db";
-import { storage } from "./storage";
-import { User as SelectUser } from "@shared/schema";
+import { storage } from "./storage.js";
+import { User as SelectUser } from "../../shared/schema.js";
 import bcrypt from "bcryptjs";
 
 declare global {

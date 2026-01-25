@@ -1,5 +1,5 @@
 import nodemailer from "nodemailer";
-import { Report } from "@shared/schema";
+import { Report } from "../../shared/schema.js";
 
 // Create a reusable transporter for sending emails
 const createTransporter = () => {

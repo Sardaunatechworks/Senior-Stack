@@ -3,7 +3,8 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage.js";
 import { api } from "../../shared/routes.js";
 import { z } from "zod";
-import { insertReportSchema } from "../../shared/schema.js";
+import { insertUserSchema, insertReportSchema, users, reports } from '../../shared/schema.js';
+import type { InsertUser, CreateReportRequest, UpdateReportStatusRequest } from '../../shared/schema.js';
 import bcrypt from "bcryptjs";
 import { sendAdminNotification } from "./email.js";
 
