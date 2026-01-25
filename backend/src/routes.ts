@@ -5,7 +5,7 @@ import { api } from "../../shared/routes.js";
 import { z } from "zod";
 import { insertReportSchema } from "../../shared/schema.js";
 import bcrypt from "bcryptjs";
-import { sendAdminNotification } from "./email";
+import { sendAdminNotification } from "./email.js";
 
 export async function registerRoutes(
   httpServer: Server,
