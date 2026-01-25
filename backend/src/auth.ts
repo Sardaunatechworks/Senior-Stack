@@ -3,7 +3,7 @@ import { Strategy as LocalStrategy } from "passport-local";
 import { Express } from "express";
 import session from "express-session";
 import pgSession from "connect-pg-simple";
-import { pool } from "./db";
+import { pool } from "./db.js";
 import { storage } from "./storage.js";
 import { User as SelectUser } from "../../shared/schema.js";
 import bcrypt from "bcryptjs";
