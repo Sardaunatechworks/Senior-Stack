@@ -1,9 +1,9 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { storage } from "./storage.js";
 import { api } from "@shared/routes";
 import { z } from "zod";
-import { insertReportSchema } from "@shared/schema";
+import { insertReportSchema } from "../../shared/schema.js";
 import bcrypt from "bcryptjs";
 import { sendAdminNotification } from "./email";
 

@@ -1,6 +1,6 @@
-import { users, reports, type User, type InsertUser, type Report, type InsertReport, type CreateReportRequest, type UpdateReportStatusRequest } from "@shared/schema";
+import { users, reports, type User, type InsertUser, type Report, type InsertReport, type CreateReportRequest, type UpdateReportStatusRequest } from "../../shared/schema.js";
 import { eq, desc } from "drizzle-orm";
-import { db as dbInstance } from "./db";
+import { db as dbInstance } from "../src/db";
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
