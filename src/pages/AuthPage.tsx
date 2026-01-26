@@ -3,16 +3,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuth } from "@/hooks/use-auth";
-import {
-  useRequestPasswordReset,
-  useResetPassword,
-} from "@/hooks/use-password-reset";
+// ✅ FIX 1: Import the correct hook from the new file
+import { usePasswordReset } from "@/hooks/use-password-reset";
 import { Redirect } from "wouter";
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -28,15 +25,16 @@ import {
 } from "@/components/ui/form";
 import { ShieldAlert, Loader2, ArrowLeft } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { insertUserSchema } from "@shared/routes";
+
+// ✅ FIX 2: Removed "@shared/routes" import entirely
 
 // Login Schema
 const loginSchema = z.object({
-  username: z.string().min(1, "Username is required"),
+  username: z.string().min(1, "Email/Username is required"),
   password: z.string().min(1, "Password is required"),
 });
 
-// Register Schema - email is required
+// Register Schema
 const registerSchema = z
   .object({
     username: z.string().min(3, "Username must be at least 3 characters"),
@@ -51,7 +49,7 @@ const registerSchema = z
   });
 
 export default function AuthPage() {
-  const { user, login, register, isLoggingIn, isRegistering } = useAuth();
+  const { user, login, register, isLoading } = useAuth();
   const [activeTab, setActiveTab] = useState("login");
   const [showPasswordReset, setShowPasswordReset] = useState(false);
 
@@ -67,7 +65,6 @@ export default function AuthPage() {
     <div className="min-h-screen grid lg:grid-cols-2 bg-background overflow-hidden">
       {/* Left Panel - Hero */}
       <div className="hidden lg:flex flex-col justify-between bg-primary p-12 text-primary-foreground relative overflow-hidden">
-        {/* Decorative elements */}
         <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
           <svg
             className="w-full h-full"
@@ -139,14 +136,14 @@ export default function AuthPage() {
             <TabsContent value="login">
               <LoginForm
                 onSubmit={(data) => login(data)}
-                isLoading={isLoggingIn}
+                isLoading={isLoading}
                 onForgotPassword={() => setShowPasswordReset(true)}
               />
             </TabsContent>
             <TabsContent value="register">
               <RegisterForm
                 onSubmit={(data) => register(data)}
-                isLoading={isRegistering}
+                isLoading={isLoading}
               />
             </TabsContent>
           </Tabs>
@@ -179,9 +176,9 @@ function LoginForm({
             name="username"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Username</FormLabel>
+                <FormLabel>Email</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter your username" {...field} />
+                  <Input placeholder="Enter your email" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -328,55 +325,26 @@ function RegisterForm({
   );
 }
 
-// Password Reset Schemas
+// ✅ FIX 3: Update Reset Schema to use EMAIL (Supabase requirement)
 const requestResetSchema = z.object({
-  username: z.string().min(1, "Username is required"),
+  email: z.string().email("Please enter a valid email address"),
 });
 
-const resetPasswordSchema = z
-  .object({
-    token: z.string().min(1, "Reset token is required"),
-    newPassword: z.string().min(6, "Password must be at least 6 characters"),
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.newPassword === data.confirmPassword, {
-    message: "Passwords don't match",
-    path: ["confirmPassword"],
-  });
-
 function PasswordResetFlow({ onBack }: { onBack: () => void }) {
-  const [step, setStep] = useState<"request" | "reset">("request");
-  const [resetToken, setResetToken] = useState("");
-  const { mutate: requestReset, isPending: isRequestingReset } =
-    useRequestPasswordReset();
-  const { mutate: resetPassword, isPending: isResettingPassword } =
-    useResetPassword();
+  const { resetPassword, isResetting } = usePasswordReset();
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const handleRequestReset = (data: z.infer<typeof requestResetSchema>) => {
-    requestReset(data.username, {
-      onSuccess: (response: any) => {
-        if (response.token) {
-          setResetToken(response.token);
-          setStep("reset");
-        }
+    resetPassword(data.email, {
+      onSuccess: () => {
+        setIsSuccess(true);
       },
     });
   };
 
-  const handleResetPassword = (data: z.infer<typeof resetPasswordSchema>) => {
-    resetPassword(
-      { token: resetToken, newPassword: data.newPassword },
-      {
-        onSuccess: () => {
-          onBack();
-        },
-      },
-    );
-  };
-
   return (
     <div className="min-h-screen grid lg:grid-cols-2 bg-background overflow-hidden">
-      {/* Left Panel - Hero */}
+      {/* Left Panel */}
       <div className="hidden lg:flex flex-col justify-between bg-primary p-12 text-primary-foreground relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
           <svg
@@ -387,30 +355,24 @@ function PasswordResetFlow({ onBack }: { onBack: () => void }) {
             <path d="M0 0 L100 0 L100 100 Z" fill="white" />
           </svg>
         </div>
-
         <div className="flex items-center gap-3 z-10">
           <ShieldAlert className="h-8 w-8" />
           <h1 className="text-2xl font-bold tracking-tight">CrimeWatch</h1>
         </div>
-
         <div className="relative z-10 max-w-lg">
           <h2 className="text-4xl font-extrabold mb-6 leading-tight">
-            Secure Reporting for <br />
-            Safer Communities.
+            Account Recovery
           </h2>
           <p className="text-primary-foreground/80 text-lg leading-relaxed">
-            A comprehensive platform for reporting incidents, tracking status,
-            and maintaining public safety records with transparency and
-            efficiency.
+            Don't worry, we'll help you get back into your account securely.
           </p>
         </div>
-
         <div className="z-10 text-sm text-primary-foreground/60">
-          © 2024 CrimeWatch System. All rights reserved.
+          © 2025 CrimeWatch System.
         </div>
       </div>
 
-      {/* Right Panel - Reset Form */}
+      {/* Right Panel */}
       <div className="flex items-center justify-center p-8">
         <div className="w-full max-w-md space-y-6">
           <Button
@@ -422,15 +384,26 @@ function PasswordResetFlow({ onBack }: { onBack: () => void }) {
             Back to Login
           </Button>
 
-          {step === "request" ? (
+          {isSuccess ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-green-600">Email Sent</CardTitle>
+                <CardDescription>
+                  We have sent a password reset link to your email address.
+                  Please check your inbox (and spam folder) and follow the link
+                  to reset your password.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button onClick={onBack} className="w-full">
+                  Return to Login
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
             <RequestResetForm
               onSubmit={handleRequestReset}
-              isLoading={isRequestingReset}
-            />
-          ) : (
-            <ResetPasswordForm
-              onSubmit={handleResetPassword}
-              isLoading={isResettingPassword}
+              isLoading={isResetting}
             />
           )}
         </div>
@@ -448,7 +421,7 @@ function RequestResetForm({
 }) {
   const form = useForm({
     resolver: zodResolver(requestResetSchema),
-    defaultValues: { username: "" },
+    defaultValues: { email: "" },
   });
 
   return (
@@ -456,7 +429,7 @@ function RequestResetForm({
       <CardHeader>
         <CardTitle>Reset Password</CardTitle>
         <CardDescription>
-          Enter your username to request a password reset
+          Enter your email address to receive a recovery link.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -464,12 +437,12 @@ function RequestResetForm({
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
-              name="username"
+              name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Username</FormLabel>
+                  <FormLabel>Email Address</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter your username" {...field} />
+                    <Input placeholder="Enter your email" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -479,94 +452,7 @@ function RequestResetForm({
               {isLoading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
-                "Request Reset"
-              )}
-            </Button>
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
-  );
-}
-
-function ResetPasswordForm({
-  onSubmit,
-  isLoading,
-}: {
-  onSubmit: (data: z.infer<typeof resetPasswordSchema>) => void;
-  isLoading: boolean;
-}) {
-  const form = useForm({
-    resolver: zodResolver(resetPasswordSchema),
-    defaultValues: { token: "", newPassword: "", confirmPassword: "" },
-  });
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Create New Password</CardTitle>
-        <CardDescription>
-          Enter your reset token and new password
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="token"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Reset Token</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Paste your reset token here"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="newPassword"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>New Password</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="password"
-                      placeholder="Enter new password"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="confirmPassword"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Confirm Password</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="password"
-                      placeholder="Confirm new password"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                "Reset Password"
+                "Send Recovery Link"
               )}
             </Button>
           </form>
