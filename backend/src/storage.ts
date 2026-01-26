@@ -1,6 +1,6 @@
 import { users, reports, type User, type InsertUser, type Report, type InsertReport, type CreateReportRequest, type UpdateReportStatusRequest } from "../../shared/schema.js";
 import { eq, desc } from "drizzle-orm";
-import { db as dbInstance } from "../src/db.js";
+import { db } from "./db.js";
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
