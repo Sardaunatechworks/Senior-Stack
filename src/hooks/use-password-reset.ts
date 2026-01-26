@@ -1,80 +1,61 @@
 import { useMutation } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
-import { api } from "@shared/routes";
 
-export function useRequestPasswordReset() {
+export function usePasswordReset() {
   const { toast } = useToast();
 
-  return useMutation({
-    mutationFn: async (username: string) => {
-      const res = await fetch(api.auth.requestReset.path, {
-        method: api.auth.requestReset.method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username }),
-        credentials: "include",
+  const resetPasswordMutation = useMutation({
+    mutationFn: async (email: string) => {
+      // Supabase handles the email sending automatically
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/update-password`,
       });
 
-      if (!res.ok) {
-        if (res.status === 404) {
-          throw new Error("User not found");
-        }
-        throw new Error("Failed to request password reset");
-      }
-
-      return await res.json();
-    },
-    onSuccess: (data) => {
-      toast({
-        title: "Reset Token Generated",
-        description: data.token ? `Token: ${data.token}` : "Check your email for reset instructions",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Request Failed",
-        description: error instanceof Error ? error.message : "Could not process reset request",
-        variant: "destructive",
-      });
-    },
-  });
-}
-
-export function useResetPassword() {
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: async ({ token, newPassword }: { token: string; newPassword: string }) => {
-      const res = await fetch(api.auth.resetPassword.path, {
-        method: api.auth.resetPassword.method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, newPassword }),
-        credentials: "include",
-      });
-
-      if (!res.ok) {
-        if (res.status === 401) {
-          throw new Error("Invalid or expired reset token");
-        }
-        if (res.status === 400) {
-          throw new Error("Password must be at least 6 characters");
-        }
-        throw new Error("Failed to reset password");
-      }
-
-      return await res.json();
+      if (error) throw error;
     },
     onSuccess: () => {
       toast({
-        title: "Password Reset Successful",
-        description: "Your password has been changed. You can now login with your new password.",
+        title: "Check your email",
+        description: "We sent you a link to reset your password.",
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
-        title: "Reset Failed",
-        description: error instanceof Error ? error.message : "Could not reset password",
+        title: "Error",
+        description: error.message || "Failed to send reset email",
         variant: "destructive",
       });
     },
   });
+
+  const updatePasswordMutation = useMutation({
+    mutationFn: async (newPassword: string) => {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Your password has been updated.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update password",
+        variant: "destructive",
+      });
+    },
+  });
+
+  return {
+    resetPassword: resetPasswordMutation.mutate,
+    isResetting: resetPasswordMutation.isPending,
+    updatePassword: updatePasswordMutation.mutate,
+    isUpdating: updatePasswordMutation.isPending,
+  };
 }
