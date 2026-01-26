@@ -1,108 +1,81 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, type InsertUser } from "@shared/routes";
-import { z } from "zod";
-import { useToast } from "@/hooks/use-toast";
+import { useState, useEffect } from "react";
+import { supabase } from "../lib/supabase";
+import { useToast } from "../hooks/use-toast";
 
 export function useAuth() {
-  const queryClient = useQueryClient();
+  const [user, setUser] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  const userQuery = useQuery({
-    queryKey: [api.auth.me.path],
-    queryFn: async () => {
-      const res = await fetch(api.auth.me.path, { credentials: "include" });
-      if (res.status === 401) return null;
-      if (!res.ok) throw new Error("Failed to fetch user");
-      return api.auth.me.responses[200].parse(await res.json());
-    },
-    retry: false,
-  });
+  useEffect(() => {
+    // 1. Check active session on load
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      fetchProfile(session?.user?.id);
+    });
 
-  const loginMutation = useMutation({
-    mutationFn: async (credentials: z.infer<typeof api.auth.login.input>) => {
-      const res = await fetch(api.auth.login.path, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(credentials),
-        credentials: "include",
-      });
-      
-      if (!res.ok) {
-        if (res.status === 401) {
-          throw new Error("Invalid username or password");
-        }
-        throw new Error("Login failed");
+    // 2. Listen for auth changes (login/logout)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        fetchProfile(session.user.id);
+      } else {
+        setUser(null);
+        setIsLoading(false);
       }
-      
-      return api.auth.login.responses[200].parse(await res.json());
-    },
-    onSuccess: (user) => {
-      queryClient.setQueryData([api.auth.me.path], user);
-      toast({ title: "Welcome back!", description: `Logged in as ${user.username}` });
-    },
-    onError: (error) => {
-      toast({ 
-        title: "Login Failed", 
-        description: error.message, 
-        variant: "destructive" 
-      });
-    },
-  });
+    });
 
-  const registerMutation = useMutation({
-    mutationFn: async (data: InsertUser) => {
-      const res = await fetch(api.auth.register.path, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-        credentials: "include",
-      });
+    return () => subscription.unsubscribe();
+  }, []);
 
-      if (!res.ok) {
-        if (res.status === 400) {
-          const error = api.auth.register.responses[400].parse(await res.json());
-          throw new Error(error.message);
-        }
-        throw new Error("Registration failed");
-      }
+  async function fetchProfile(userId?: string) {
+    if (!userId) {
+      setIsLoading(false);
+      return;
+    }
+    const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
+    setUser(data);
+    setIsLoading(false);
+  }
 
-      return api.auth.register.responses[201].parse(await res.json());
-    },
-    onSuccess: (user) => {
-      queryClient.setQueryData([api.auth.me.path], user);
-      toast({ title: "Account Created", description: "Welcome to CrimeWatch." });
-    },
-    onError: (error) => {
-      toast({ 
-        title: "Registration Failed", 
-        description: error.message, 
-        variant: "destructive" 
-      });
-    },
-  });
-
-  const logoutMutation = useMutation({
-    mutationFn: async () => {
-      const res = await fetch(api.auth.logout.path, { 
-        method: "POST",
-        credentials: "include" 
-      });
-      if (!res.ok) throw new Error("Logout failed");
-    },
-    onSuccess: () => {
-      queryClient.setQueryData([api.auth.me.path], null);
-      queryClient.clear();
-      toast({ title: "Logged out", description: "See you next time." });
-    },
-  });
-
-  return {
-    user: userQuery.data,
-    isLoading: userQuery.isLoading,
-    login: loginMutation.mutate,
-    isLoggingIn: loginMutation.isPending,
-    register: registerMutation.mutate,
-    isRegistering: registerMutation.isPending,
-    logout: logoutMutation.mutate,
+  const login = async (credentials: any) => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email: credentials.username, // Assuming username field actually holds email for Supabase
+      password: credentials.password,
+    });
+    if (error) {
+      toast({ title: "Login Failed", description: error.message, variant: "destructive" });
+      throw error;
+    }
+    toast({ title: "Welcome back!" });
   };
+
+  const register = async (data: any) => {
+    // 1. Create Auth User
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: data.email,
+      password: data.password,
+    });
+    if (authError) {
+      toast({ title: "Registration Failed", description: authError.message, variant: "destructive" });
+      throw authError;
+    }
+
+    // 2. Create Profile Entry
+    if (authData.user) {
+      const { error: profileError } = await supabase.from('profiles').insert({
+        id: authData.user.id,
+        username: data.username,
+        email: data.email,
+        role: 'reporter'
+      });
+      if (profileError) console.error("Profile creation failed:", profileError);
+    }
+    toast({ title: "Account Created!", description: "Please check your email to verify." });
+  };
+
+  const logout = async () => {
+    await supabase.auth.signOut();
+    toast({ title: "Logged out" });
+  };
+
+  return { user, isLoading, login, register, logout };
 }
