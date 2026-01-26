@@ -3,7 +3,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useCreateReport } from "@/hooks/use-reports";
-import { insertReportSchema } from "@shared/routes";
 import {
   Dialog,
   DialogContent,
@@ -43,8 +42,13 @@ import { Button } from "@/components/ui/button";
 import { Loader2, PlusCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-// Schema for the form - remove status as it defaults to pending
-const formSchema = insertReportSchema.omit({ status: true });
+// ✅ FIX: Define Schema Locally (Removed @shared dependency)
+const formSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z.string().min(1, "Description is required"),
+  category: z.string().min(1, "Category is required"),
+  location: z.string().min(1, "Location is required"),
+});
 
 const CATEGORIES = [
   "Theft",
@@ -104,10 +108,8 @@ export function CreateReportDialog() {
         try {
           const lat = pos.coords.latitude;
           const lng = pos.coords.longitude;
-
-          // Try to get address from coordinates using reverse geocoding
           const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`,
           );
 
           if (response.ok) {
@@ -118,7 +120,7 @@ export function CreateReportDialog() {
               data.address?.city ||
               `${lat.toFixed(6)},${lng.toFixed(6)}`;
             const fullLocation = `${address} (${lat.toFixed(6)}, ${lng.toFixed(
-              6
+              6,
             )})`;
             form.setValue("location", fullLocation, { shouldValidate: true });
             toast({
@@ -126,13 +128,11 @@ export function CreateReportDialog() {
               description: fullLocation,
             });
           } else {
-            // Fallback to coordinates if reverse geocoding fails
             const val = `${lat.toFixed(6)},${lng.toFixed(6)}`;
             form.setValue("location", val, { shouldValidate: true });
             toast({ title: "Location set (coordinates)", description: val });
           }
         } catch (error) {
-          // Fallback if reverse geocoding fails
           const lat = pos.coords.latitude;
           const lng = pos.coords.longitude;
           const val = `${lat.toFixed(6)},${lng.toFixed(6)}`;
@@ -143,7 +143,7 @@ export function CreateReportDialog() {
       (err) => {
         toast({ title: "Could not get location", description: err.message });
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: true, timeout: 10000 },
     );
   }
 

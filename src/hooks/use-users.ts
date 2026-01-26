@@ -1,66 +1,43 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@shared/routes";
-import { z } from "zod";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 
 export function useUsers() {
-  const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const usersQuery = useQuery({
-    queryKey: [api.users.list.path],
+  // 1. Fetch Users (Profiles) from Supabase
+  const { data: users, isLoading } = useQuery({
+    queryKey: ["users"],
     queryFn: async () => {
-      const res = await fetch(api.users.list.path, { credentials: "include" });
-      if (res.status === 401) return [];
-      if (res.status === 403) return [];
-      if (!res.ok) throw new Error("Failed to fetch users");
-      return api.users.list.responses[200].parse(await res.json());
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .order("role", { ascending: true });
+
+      if (error) throw error;
+      return data;
     },
-    retry: false,
   });
 
-  const createUserMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof api.users.create.input>) => {
-      const res = await fetch(api.users.create.path, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-        credentials: "include",
-      });
-
-      if (!res.ok) {
-        if (res.status === 400) {
-          const error = await res.json();
-          throw new Error(error.message || "Validation failed");
-        }
-        if (res.status === 403) {
-          throw new Error("Only admins can create users");
-        }
-        throw new Error("Failed to create user");
-      }
-
-      return api.users.create.responses[201].parse(await res.json());
-    },
-    onSuccess: (user) => {
-      queryClient.invalidateQueries({ queryKey: [api.users.list.path] });
-      toast({
-        title: "User Created",
-        description: `User "${user.username}" created as ${user.role}.`,
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Failed to Create User",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+  // 2. Create User Stub
+  // Note: Creating *other* users (like an Admin creating a Reporter) is restricted 
+  // in Supabase client-side for security. Usually, users must sign up themselves.
+  // We will keep this function to prevent your "CreateUserDialog" from crashing.
+  const createUser = async (userData: any, options?: any) => {
+    toast({
+      title: "Feature Restricted",
+      description: "For security, users must register themselves on the Sign Up page.",
+      variant: "destructive"
+    });
+    
+    // If you strictly need this, you would need a Supabase Edge Function.
+    // For now, we return safely so the app doesn't break.
+  };
 
   return {
-    users: usersQuery.data || [],
-    isLoading: usersQuery.isLoading,
-    createUser: createUserMutation.mutate,
-    isCreating: createUserMutation.isPending,
+    users,
+    isLoading,
+    createUser,
+    isCreating: false,
   };
 }
