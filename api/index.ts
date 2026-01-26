@@ -9,19 +9,24 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { registerRoutes } from "../backend/src/routes.js"; 
 import { serveStatic } from "../backend/src/static.js"; 
 
+// api/index.ts
+
+// ... imports remain the same ...
+
 const app = express();
 
-// Global Middleware setup
+// ✅ FIX 1: Trust Vercel's Proxy (Crucial for Cookies)
+app.set("trust proxy", 1); 
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 
-// CORS Setup for Vercel
+// ✅ FIX 2: Dynamic CORS (Allows Cookies from ANY of your Vercel domains)
 app.use((req, res, next) => {
-  const allowedOrigin = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : "*";
-  res.header("Access-Control-Allow-Origin", allowedOrigin);
+  const origin = req.headers.origin || "*";
+  
+  res.header("Access-Control-Allow-Origin", origin);
   res.header("Access-Control-Allow-Credentials", "true");
   res.header("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE");
   res.header("Access-Control-Allow-Headers", "Content-Type,Authorization");
@@ -32,6 +37,7 @@ app.use((req, res, next) => {
   next();
 });
 
+// ... rest of the file (createServer, registerRoutes, etc.) ...
 const httpServer = createServer(app);
 
 // Initialize Routes
